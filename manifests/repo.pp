@@ -1,37 +1,39 @@
-class jenkins::repo ( $lts = 0, $repo = 1 )
-	{
-  # JJM These anchors work around #8040
-  anchor { 'jenkins::repo::alpha': }
-  anchor { 'jenkins::repo::omega': }
-  
-  if $repo == 1 {
-	  case $::osfamily {
-	    'RedHat': {
-	      class { 'jenkins::repo::el':
-			lts  => $lts,
-	        require => Anchor['jenkins::repo::alpha'],
-	        before  => Anchor['jenkins::repo::omega'],
-	      }
-	    }
-	    'Linux': {
-	      class { 'jenkins::repo::el':
-			lts  => $lts,
-	        require => Anchor['jenkins::repo::alpha'],
-	        before  => Anchor['jenkins::repo::omega'],
-	      }
-	    }
-	    'Debian': {
-	      class { 'jenkins::repo::debian':
-			lts  => $lts,
-		    require => Anchor['jenkins::repo::alpha'],
-	        before  => Anchor['jenkins::repo::omega'],
-	      }
-	    }
+#
+# jenkins::repo handles pulling in the platform specific repo classes
+#
+class jenkins::repo {
+  include stdlib
+  anchor { 'jenkins::repo::begin': }
+  anchor { 'jenkins::repo::end': }
 
-	    default: {
-	      fail( "Unsupported OS family: ${::osfamily}" )
-	    }
-	  }
+  if ( $::jenkins::repo ) {
+    case $::osfamily {
+
+      'RedHat', 'Linux': {
+        class { 'jenkins::repo::el': }
+        Anchor['jenkins::repo::begin'] ->
+          Class['jenkins::repo::el'] ->
+          Anchor['jenkins::repo::end']
+      }
+
+      'Debian': {
+        class { 'jenkins::repo::debian': }
+        Anchor['jenkins::repo::begin'] ->
+          Class['jenkins::repo::debian'] ->
+          Anchor['jenkins::repo::end']
+      }
+
+      'Suse' : {
+        class { 'jenkins::repo::suse': }
+        Anchor['jenkins::repo::begin'] ->
+          Class['jenkins::repo::suse'] ->
+          Anchor['jenkins::repo::end']
+      }
+
+      default: {
+        fail( "Unsupported OS family: ${::osfamily}" )
+      }
+    }
   }
 }
 
